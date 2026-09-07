@@ -1,0 +1,19 @@
+{
+  "name": "xnhau.ware",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vercel dev --listen 3000",
+    "build": "vercel build"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.2.0",
+    "formidable": "^2.0.1",
+    "pg": "^8.10.0",
+    "node-fetch": "^2.6.7",
+    "multer": "^2.0.2",
+    "express": "^5.1.0"
+  }
+}
