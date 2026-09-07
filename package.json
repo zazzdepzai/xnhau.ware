@@ -3,18 +3,24 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "vercel dev --listen 3000",
-    "build": "vercel build"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@vercel/blob": "^1.0.0",
-    "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^12.2.0",
-    "formidable": "^2.0.1",
-    "pg": "^8.10.0",
-    "node-fetch": "^2.6.7",
-    "multer": "^2.0.2",
-    "express": "^5.1.0"
+    "@vercel/blob": "^2.0.0",
+    "bcryptjs": "^3.0.2",
+    "next": "^15.5.0",
+    "pg": "^8.16.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/pg": "^8.15.5",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "typescript": "^5.9.2"
   }
 }
