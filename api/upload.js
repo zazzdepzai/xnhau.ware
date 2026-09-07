@@ -1,14 +1,55 @@
-// Upload handler for serverless (thumbnail + video). Uses formidable to parse multipart
 const formidable = require('formidable');
 const fs = require('fs');
 const path = require('path');
 const { init, isPostgres } = require('../api/db');
 const { tok } = require('../api/utils');
 
+// Attempt to load @vercel/blob dynamically; if not available or not configured, fallback to local storage
+let vercelBlob = null;
+try {
+  vercelBlob = require('@vercel/blob');
+} catch (e) {
+  vercelBlob = null;
+}
+
+async function uploadToBlob(filename, streamOrBuffer, contentType) {
+  // Use BLOB_READ_WRITE_TOKEN when provided; prefer OIDC when running within Vercel and package supports it
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const bucket = process.env.VERCEL_BLOB_BUCKET || undefined;
+  if (!vercelBlob) return null;
+  try {
+    // Different versions of @vercel/blob may expose different APIs. We'll try common patterns safely.
+    if (vercelBlob.createClient && typeof vercelBlob.createClient === 'function') {
+      const client = vercelBlob.createClient({ token });
+      if (client.upload && typeof client.upload === 'function') {
+        const key = `${Date.now()}-${filename}`;
+        const res = await client.upload({ bucket, key, body: streamOrBuffer, contentType });
+        // assume res.url or res.location
+        return res?.url || res?.location || null;
+      }
+    }
+    if (vercelBlob.upload && typeof vercelBlob.upload === 'function') {
+      const res = await vercelBlob.upload({ token, bucket, name: filename, data: streamOrBuffer });
+      return res?.url || res?.location || null;
+    }
+    // Last resort: if package exposes Blob class with put method
+    if (vercelBlob.Blob && typeof vercelBlob.Blob === 'function') {
+      const client = new vercelBlob.Blob({ token });
+      if (client.put) {
+        const key = `${Date.now()}-${filename}`;
+        const r = await client.put(key, streamOrBuffer, { contentType });
+        return r?.url || null;
+      }
+    }
+  } catch (e) {
+    console.error('Blob upload failed', e);
+    return null;
+  }
+  return null;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ success:false, error:'Method not allowed' });
-  // For simplicity we allow admin authentication via sid cookie; reuse admin/profile auth logic
-  // Minimal auth: check session exists
   const db = await init();
   // check sid cookie
   const cookiesRaw = req.headers.cookie || '';
@@ -35,26 +76,45 @@ module.exports = async (req, res) => {
     const description = String(fields.description || '').trim().slice(0,2000);
     const tags = String(fields.tags || '').trim().slice(0,200);
     const visibility = ['public','unlisted','private'].includes(String(fields.visibility)) ? String(fields.visibility) : 'public';
-    // Move files to public/uploads (local) and store metadata
-    const dataDir = path.join(__dirname, '..', 'public', 'uploads');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    const ext = path.extname(video.originalFilename || video.newFilename || '');
-    const stored = tok() + ext;
-    const dest = path.join(dataDir, stored);
+
+    // Try upload to Blob if configured
+    let stored = null;
+    let publicUrl = null;
     try {
-      fs.copyFileSync(video.filepath || video.file, dest);
-    } catch(e) {
-      // try fs.rename
-      try { fs.renameSync(video.filepath, dest); } catch(e2) { console.error(e2); }
+      const buffer = fs.readFileSync(video.filepath);
+      if (process.env.BLOB_READ_WRITE_TOKEN && vercelBlob) {
+        publicUrl = await uploadToBlob(video.originalFilename, buffer, video.mimetype || 'application/octet-stream');
+        if (publicUrl) {
+          stored = null; // no local file
+        }
+      }
+    } catch (e) {
+      console.error('Blob attempt error', e);
     }
+
+    // Fallback: save to public/uploads
+    if (!publicUrl) {
+      const dataDir = path.join(__dirname, '..', 'public', 'uploads');
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      const ext = path.extname(video.originalFilename || video.newFilename || '');
+      stored = tok() + ext;
+      const dest = path.join(dataDir, stored);
+      try {
+        fs.copyFileSync(video.filepath || video.file, dest);
+      } catch(e) {
+        try { fs.renameSync(video.filepath, dest); } catch(e2) { console.error(e2); }
+      }
+      publicUrl = `/uploads/${stored}`;
+    }
+
     let t = tok();
     if (isPostgres) {
-      // insert into videos with url pointing to /uploads/
-      await db.query('INSERT INTO videos(token,original_name,stored_name,url,mime,size,title,description,thumbnail,tags,visibility) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)', [t, video.originalFilename, stored, `/uploads/${stored}`, video.mimetype || '', video.size || 0, title, description, null, tags, visibility]);
+      await db.query('INSERT INTO videos(token,original_name,stored_name,url,mime,size,title,description,thumbnail,tags,visibility) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)', [t, video.originalFilename, stored, publicUrl, video.mimetype || '', video.size || 0, title, description, null, tags, visibility]);
     } else {
-      db.prepare('INSERT INTO videos(token,original_name,stored_name,url,mime,size,title,description,thumbnail,tags,visibility) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(t, video.originalFilename, stored, `/uploads/${stored}`, video.mimetype || '', video.size || 0, title, description, null, tags, visibility);
+      db.prepare('INSERT INTO videos(token,original_name,stored_name,url,mime,size,title,description,thumbnail,tags,visibility) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(t, video.originalFilename, stored, publicUrl, video.mimetype || '', video.size || 0, title, description, null, tags, visibility);
     }
-    const shareUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}/v/${t}`;
+    const proto = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http') || 'http';
+    const shareUrl = `${proto}://${req.headers.host}/v/${t}`;
     res.json({ success:true, shareUrl, token: t, title });
   });
 };

@@ -1,8 +1,3 @@
-Updated project to add Vercel serverless API routes, DB abstraction (Postgres fallback to SQLite), and Vercel config.
+Updated README to remove VERCEL_BLOB_TOKEN and recommend BLOB_READ_WRITE_TOKEN or OIDC. Also updated .env.example and package.json to include @vercel/blob dependency.
 
-Run locally:
-1. npm install
-2. cp .env.example .env and edit as needed
-3. npm start (runs express server for local dev) OR use `vercel dev` with `npm run dev`
-
-Production on Vercel: set DATABASE_URL (Vercel Postgres) and optionally VERCEL_BLOB_* env vars.
+Note: Upload code will attempt to use @vercel/blob if available and BLOB_READ_WRITE_TOKEN is set, otherwise it falls back to saving files in public/uploads for local dev.
