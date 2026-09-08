@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Video HUD</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="orb"></div>
+  <main class="shell">
+    <header class="top">
+      <div>
+        <span class="pill online">● ONLINE</span>
+        <h1>Video HUD</h1>
+        <p>iOS-style control center — quản lý toàn bộ nội dung</p>
+      </div>
+
+      <div class="admin-profile">
+        <div>
+          <img id="adminAvatar" src="/uploads/admin-avatar.svg" class="avatar">
+          <div class="profile-name"><span id="adminName">Admin</span><span id="adminVerified" class="verified" title="Đã xác minh">✓</span></div>
+        </div>
+        <label class="avatar-btn">Avatar<input id="avatarFile" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="uploadAvatar()"></label>
+      </div>
+
+      <div class="actions">
+        <button class="ghost" onclick="logout()">Đăng xuất</button>
+        <button class="icon" id="themeBtn" onclick="toggleTheme()">☼</button>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="glass">
+        <b id="vcount">0</b>
+        <small>Videos</small>
+      </div>
+      <div class="glass">
+        <b id="views">0</b>
+        <small>Views</small>
+      </div>
+      <div class="glass">
+        <b id="likes">0</b>
+        <small>Likes</small>
+      </div>
+      <div class="glass">
+        <b id="comments">0</b>
+        <small>Comments</small>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Admin profile</h2>
+      <div class="profile-edit">
+        <input id="profileName" maxlength="40" placeholder="Tên admin">
+        <button class="primary" onclick="saveProfile()">Lưu tên</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Upload video</h2>
+      <input id="title" placeholder="Tiêu đề video" maxlength="160">
+      <input id="f" type="file" accept="video/mp4,video/webm,video/quicktime">
+      <div class="progress"><i id="bar"></i></div>
+      <button class="primary" onclick="upload()">Upload & generate link</button>
+      <div id="msg"></div>
+    </section>
+
+    <section class="card">
+      <div class="row"><h2>Library</h2>
+        <div>
+          <button class="ghost" onclick="load()">Refresh</button>
+          <button class="ghost" onclick="selectAll()">Select All</button>
+          <button class="danger" onclick="bulkDelete()">Delete Selected</button>
+        </div>
+      </div>
+      <input id="search" placeholder="Search video...">
+      <div id="list"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let data = [];
+    const ADMIN = localStorage.getItem('admin_password');
+    if (!ADMIN) location.href = '/admin';
+
+    function toast(x){
+      const toastEl = $("toast");
+      toastEl.textContent = x;
+      toastEl.classList.add("show");
+      setTimeout(()=>toastEl.classList.remove("show"),2200);
+    }
+
+    async function uploadAvatar(){
+      const f = $("avatarFile").files[0]; if(!f) return;
+      const fd = new FormData(); fd.append('avatar', f);
+      try{ const d = await api('/api/admin/avatar',{method:'POST', body: fd}); $('adminAvatar').src = d.avatar; toast('Đã đổi avatar'); }catch(e){ toast(e.message); }
+    }
+
+    function loadAvatar(){
+      fetch('/api/admin/profile',{headers:{'x-admin-password':ADMIN}}).then(r=>r.json()).then(d=>{ if(d.avatar) $('adminAvatar').src = d.avatar; if(d.name) $('adminName').textContent = d.name; }).catch(()=>{});
+    }
+
+    function logout(){ localStorage.removeItem('admin_password'); location.href='/admin'; }
+
+    function applyTheme(theme){ if(theme==='light') document.body.classList.add('light'); else document.body.classList.remove('light'); localStorage.theme = theme; $('themeBtn').textContent = theme==='light' ? '☾' : '☼'; }
+    function toggleTheme(){ const t = document.body.classList.contains('light') ? 'dark' : 'light'; applyTheme(t); }
+    // init theme
+    const savedTheme = localStorage.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark'); applyTheme(savedTheme);
+
+    async function api(url,opt={}){ opt.headers={...(opt.headers||{}),'x-admin-password':ADMIN}; let r=await fetch(url,opt); let d = await r.json(); if(!r.ok) throw Error(d.error||'Error'); return d; }
+
+    async function saveProfile(){ try{ const name = $('profileName').value.trim(); const body = { name }; const d = await api('/api/admin/profile',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}); toast('Profile saved'); $('adminName').textContent = d.name || name; } catch(e){ toast(e.message); } }
+
+    async function load(){ try{ const [s,a] = await Promise.all([api('/api/admin/stats'), api('/api/admin/list')]); $('vcount').textContent=s.videos; $('views').textContent=s.views; $('likes').textContent=s.likes; $('comments').textContent=s.comments; data = a; render(); }catch(e){ toast(e.message); } }
+
+    function render(){ const q = $('search').value.toLowerCase(); const list = $('list'); list.innerHTML = data.filter(x => (x.title||x.original_name).toLowerCase().includes(q)).map(x => `
+      <article class="item">
+        <div style="display:flex;gap:12px;align-items:center">
+          <input type="checkbox" class="sel" data-id="${x.id}">
+          <div>
+            <b>${esc(x.title||x.original_name)}</b>
+            <small>${esc(x.original_name)}</small>
+            <small>${(x.size/1048576).toFixed(1)} MB · ${x.views} views · ${x.likes} likes</small>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="ghost" target="_blank" href="/v/${x.token}">Open</a>
+          <button class="ghost" onclick="copy('${location.origin}/v/${x.token}')">Copy</button>
+          <button class="danger" onclick="del(${x.id})">Delete</button>
+        </div>
+      </article>
+      `).join('') || '<p class="muted">No videos</p>';
+    }
+
+    function selectAll(){ const boxes = document.querySelectorAll('#list .sel'); boxes.forEach(b=>b.checked=true); }
+
+    async function bulkDelete(){ const boxes = [...document.querySelectorAll('#list .sel')].filter(b=>b.checked); if(!boxes.length) return toast('Chưa chọn video'); if(!confirm(`Xóa ${boxes.length} video?`)) return; try{ for(const b of boxes){ await api('/api/admin/video/'+b.dataset.id,{method:'DELETE'}); } await load(); toast('Đã xóa'); }catch(e){ toast(e.message); } }
+
+    function esc(s){ return String(s||'').replace(/[&<>\
