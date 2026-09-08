@@ -1,14 +1,15 @@
 const { Pool } = require('pg');
+const { bcrypt } = require('./utils');
 
 let pool = null;
+const isPostgres = Boolean(process.env.DATABASE_URL);
 
 async function init() {
+  if (!isPostgres) {
+    throw new Error('DATABASE_URL is required. Please set it in your environment (Postgres).');
+  }
   if (pool) return pool;
   const DATABASE_URL = process.env.DATABASE_URL;
-  if (!DATABASE_URL) {
-    // Do not throw during module import. Throw only when init() is called and DATABASE_URL is missing.
-    throw new Error('DATABASE_URL is required. Please set it in your environment (Neon/Vercel Postgres).');
-  }
   pool = new Pool({ connectionString: DATABASE_URL });
 
   // Run migrations (create tables if not exist)
@@ -61,7 +62,22 @@ async function init() {
     await pool.query(q);
   }
 
+  // If ADMIN_PASSWORD is set and no admin_hash exists, seed it
+  try {
+    if (process.env.ADMIN_PASSWORD) {
+      const r = await pool.query('SELECT value FROM profiles WHERE key=$1', ['admin_hash']);
+      if (!r.rows.length) {
+        const hash = bcrypt.hashSync(String(process.env.ADMIN_PASSWORD), 10);
+        await pool.query('INSERT INTO profiles(key,value) VALUES($1,$2)', ['admin_hash', hash]);
+        console.log('[xnhau.cc] admin_hash created from ADMIN_PASSWORD (please change in DB if needed)');
+      }
+    }
+  } catch (e) {
+    // non-fatal
+    console.warn('[xnhau.cc] failed to seed admin_hash:', e && e.message ? e.message : e);
+  }
+
   return pool;
 }
 
-module.exports = { init, isPostgres: true };
+module.exports = { init, isPostgres };

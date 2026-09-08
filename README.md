@@ -1,11 +1,41 @@
-Removed references to Next.js and SQLite. Restored Express server entry (server.js) and updated db to use Postgres (Neon/Vercel Postgres). package.json now includes only runtime dependencies required by Express. The application exports the Express app when running under Vercel and listens locally when run directly.
+# xnhau.cc
 
-Important notes:
-- DATABASE_URL must be set in production (Vercel Postgres / Neon).
-- BLOB_READ_WRITE_TOKEN is the static token fallback for Vercel Blob; prefer OIDC by connecting Blob via Vercel dashboard.
-- For local development you will need a running Postgres DB and DATABASE_URL set. The repository no longer uses SQLite.
+Personal video sharing web app (Node.js + Express + Postgres)
 
-Run locally:
-1. npm install
-2. cp .env.example .env and set DATABASE_URL and ADMIN_PASSWORD
-3. npm start
+Quick start
+
+1. Install dependencies
+
+   npm install
+
+2. Create a Postgres database and set environment variables. Example .env (create `.env` locally or set env vars directly):
+
+   PORT=3000
+   DATABASE_URL=postgres://user:pass@host:5432/dbname
+   SESSION_SECRET=some-random-secret
+   ADMIN_PASSWORD=your-admin-password
+   BLOB_READ_WRITE_TOKEN=
+   VERCEL_BLOB_BUCKET=
+
+3. Start the app
+
+   npm start
+
+4. Open:
+
+   http://localhost:3000/admin  — admin login
+   http://localhost:3000/       — homepage (if provided)
+   http://localhost:3000/v/:token — video page
+
+Notes
+
+- If `ADMIN_PASSWORD` is provided and no admin hash exists in the database, the app will auto-seed a bcrypt hash into the `profiles` table under key `admin_hash`. You can later change it directly in DB.
+- The app requires `DATABASE_URL` for all DB-backed endpoints. The `/api/health` endpoint works without DB.
+- To seed admin manually, generate a bcrypt hash:
+
+  node -e "console.log(require('bcryptjs').hashSync('your-admin-password', 10))"
+
+  then insert into Postgres:
+
+  INSERT INTO profiles(key,value) VALUES('admin_hash','<hash>') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value;
+

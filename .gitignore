@@ -1,8 +1,16 @@
-# Ignore local DB and uploads
-data/app.db
+# Local environment
 .env
-node_modules
-public/uploads/*
 
-# Vercel
-.vercel
+# Node
+node_modules/
+
+# Database files
+*.db
+
+# Uploaded files (if storing locally)
+/public/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
