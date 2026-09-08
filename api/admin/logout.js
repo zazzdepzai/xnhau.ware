@@ -3,8 +3,7 @@ const { parseCookies, setCookie } = require('../utils');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ success:false, error:'Method not allowed' });
-  const dbObj = await init();
-  const db = dbObj.pool;
+  const db = await init();
   const cookies = parseCookies(req);
   const sid = cookies.sid;
   if (sid) {

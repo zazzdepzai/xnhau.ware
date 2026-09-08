@@ -3,13 +3,12 @@ const { tok, nowISO, parseCookies, setCookie, bcrypt } = require('../utils');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ success:false, error:'Method not allowed' });
-  const dbObj = await init();
-  const db = dbObj.pool;
+  const db = await init();
   const body = req.body || {};
   const pw = String(body.password || '');
   if (!pw) return res.status(400).json({ success:false, error:'Missing password' });
   // get admin_hash
-  const r = (await db.query("SELECT value FROM profiles WHERE key='admin_hash'")).rows;
+  const r = (await db.query("SELECT value FROM profiles WHERE key='admin_hash' LIMIT 1")).rows;
   if (!r.length) return res.status(500).json({ success:false, error:'Admin not configured' });
   const hash = r[0].value;
   const ok = await bcrypt.compare(pw, hash);

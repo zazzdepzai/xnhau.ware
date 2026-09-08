@@ -5,8 +5,7 @@ async function auth(req) {
   const cookies = parseCookies(req);
   const sid = cookies.sid;
   if (!sid) return false;
-  const dbObj = await init();
-  const db = dbObj.pool;
+  const db = await init();
   const r = (await db.query('SELECT token,expires_at FROM sessions WHERE token=$1', [sid])).rows;
   if (!r.length) return false;
   const exp = new Date(r[0].expires_at);
@@ -16,20 +15,19 @@ async function auth(req) {
 }
 
 module.exports = async (req, res) => {
-  const dbObj = await init();
-  const db = dbObj.pool;
+  const db = await init();
   if (req.method === 'GET') {
     // return profile (admin only)
     if (!await auth(req)) return res.status(401).json({ success:false, error:'Unauthorized' });
-    const nameRow = (await db.query("SELECT value FROM profiles WHERE key='name'")).rows;
+    const nameRow = (await db.query("SELECT value FROM profiles WHERE key='name' LIMIT 1")).rows;
     const name = nameRow.length ? nameRow[0].value : 'Admin';
-    const usernameRow = (await db.query("SELECT value FROM profiles WHERE key='username'")).rows;
+    const usernameRow = (await db.query("SELECT value FROM profiles WHERE key='username' LIMIT 1")).rows;
     const username = usernameRow.length ? usernameRow[0].value : 'admin';
-    const bioRow = (await db.query("SELECT value FROM profiles WHERE key='bio'")).rows;
+    const bioRow = (await db.query("SELECT value FROM profiles WHERE key='bio' LIMIT 1")).rows;
     const bio = bioRow.length ? bioRow[0].value : '';
-    const websiteRow = (await db.query("SELECT value FROM profiles WHERE key='website'")).rows;
+    const websiteRow = (await db.query("SELECT value FROM profiles WHERE key='website' LIMIT 1")).rows;
     const website = websiteRow.length ? websiteRow[0].value : '';
-    const verifiedRow = (await db.query("SELECT value FROM profiles WHERE key='verified'")).rows;
+    const verifiedRow = (await db.query("SELECT value FROM profiles WHERE key='verified' LIMIT 1")).rows;
     const verified = !!(verifiedRow.length && verifiedRow[0].value);
     return res.json({ avatar: '/uploads/admin-avatar.svg', name, username, bio, website, verified });
   }

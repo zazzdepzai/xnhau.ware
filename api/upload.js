@@ -1,8 +1,8 @@
 const formidable = require('formidable');
 const fs = require('fs');
 const path = require('path');
-const { init } = require('./db');
-const { tok } = require('./utils');
+const { init } = require('../db');
+const { tok } = require('../utils');
 
 let vercelBlob = null;
 try { vercelBlob = require('@vercel/blob'); } catch(e) { vercelBlob = null; }
@@ -33,7 +33,7 @@ async function uploadToBlob(filename, streamOrBuffer, contentType) {
       }
     }
   } catch (e) {
-    console.error('Blob upload failed', e);
+    console.error('[xnhau.cc] Blob upload failed', e);
     return null;
   }
   return null;
@@ -41,8 +41,7 @@ async function uploadToBlob(filename, streamOrBuffer, contentType) {
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ success:false, error:'Method not allowed' });
-  const dbObj = await init();
-  const db = dbObj.pool;
+  const db = await init();
   const cookiesRaw = req.headers.cookie || '';
   const cookies = {};
   cookiesRaw.split(';').forEach(p=>{const [k,v]=p.split('='); if(k && v) cookies[k.trim()]=v.trim();});
@@ -70,7 +69,7 @@ module.exports = async (req, res) => {
         publicUrl = await uploadToBlob(video.originalFilename, buffer, video.mimetype || 'application/octet-stream');
         if (publicUrl) stored = null;
       }
-    } catch (e) { console.error('Blob attempt error', e); }
+    } catch (e) { console.error('[xnhau.cc] Blob attempt error', e); }
 
     if (!publicUrl) {
       const dataDir = path.join(__dirname, '..', 'public', 'uploads');

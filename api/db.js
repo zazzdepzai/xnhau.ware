@@ -3,9 +3,10 @@ const { Pool } = require('pg');
 let pool = null;
 
 async function init() {
-  if (pool) return { pool, isPostgres: true };
+  if (pool) return pool;
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) {
+    // Do not throw during module import. Throw only when init() is called and DATABASE_URL is missing.
     throw new Error('DATABASE_URL is required. Please set it in your environment (Neon/Vercel Postgres).');
   }
   pool = new Pool({ connectionString: DATABASE_URL });
@@ -60,7 +61,7 @@ async function init() {
     await pool.query(q);
   }
 
-  return { pool, isPostgres: true };
+  return pool;
 }
 
 module.exports = { init, isPostgres: true };
