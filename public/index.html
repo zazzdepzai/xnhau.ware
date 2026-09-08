@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>xnhau.cc — Trang chủ</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#222;margin:0;padding:40px;background:#f7f7f8}
+    header{max-width:900px;margin:0 auto}
+    h1{margin:0 0 8px;font-size:28px}
+    p.lead{color:#444}
+    .links{margin-top:24px}
+    a.button{display:inline-block;padding:10px 14px;border-radius:6px;background:#1f6feb;color:#fff;text-decoration:none;margin-right:8px}
+    footer{margin-top:40px;color:#666;font-size:13px}
+    pre{background:#fff;border:1px solid #e6e6e9;padding:12px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>xnhau.cc</h1>
+    <p class="lead">Ứng dụng chia sẻ video nhỏ. Đây là trang tĩnh mặc định được phục vụ khi không có nội dung động.</p>
+
+    <div class="links">
+      <a class="button" href="/admin">Đăng nhập admin</a>
+      <a class="button" href="/api/health">Health (API)</a>
+      <a class="button" href="/v/example">Ví dụ video</a>
+    </div>
+
+    <section style="margin-top:28px">
+      <h2>Hướng dẫn nhanh</h2>
+      <ol>
+        <li>Kiểm tra API health: <code>GET /api/health</code></li>
+        <li>Đăng nhập admin: <code>/admin</code></li>
+        <li>Tải lên video từ trang admin (sau khi đăng nhập)</li>
+      </ol>
+    </section>
+
+    <section style="margin-top:18px">
+      <h3>Debug logs</h3>
+      <p>Nếu bạn thấy chỉ có dòng chữ <em>xnhau.cc</em> trước đây, hệ thống chưa tìm thấy tệp <code>public/index.html</code>. Tôi vừa thêm trang này để hiển thị nội dung mặc định.</p>
+    </section>
+
+    <footer>
+      <div>Phiên bản: commit hiện tại trên nhánh <code>main</code>.</div>
+      <div style="margin-top:8px">Nếu bạn muốn nội dung khác, chỉnh sửa <code>public/index.html</code> trong repo và deploy lại.</div>
+    </footer>
+  </header>
+</body>
+</html>

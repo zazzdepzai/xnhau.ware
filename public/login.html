@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Login — xnhau.cc</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f4f6f8;color:#222;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+    .box{background:#fff;padding:28px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06);width:360px}
+    h1{margin:0 0 12px;font-size:20px}
+    input{display:block;width:100%;padding:10px;margin:8px 0;border:1px solid #e6e7ea;border-radius:6px}
+    button{background:#1f6feb;color:#fff;padding:10px 12px;border:0;border-radius:6px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Đăng nhập Admin</h1>
+    <form id="login">
+      <input name="password" type="password" placeholder="Mật khẩu admin" required />
+      <div style="margin-top:10px"><button type="submit">Đăng nhập</button></div>
+    </form>
+    <p id="msg" style="color:#c00;margin-top:10px"></p>
+  </div>
+
+  <script>
+    const f = document.getElementById('login');
+    const msg = document.getElementById('msg');
+    f.addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      msg.textContent = '';
+      const pw = f.password.value;
+      try {
+        const r = await fetch('/api/admin/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
+        const j = await r.json();
+        if (j.success) {
+          msg.style.color = 'green'; msg.textContent = 'Đăng nhập thành công';
+          setTimeout(()=>location.href='/admin/panel', 600);
+        } else {
+          msg.style.color = '#c00'; msg.textContent = j.error || 'Lỗi';
+        }
+      } catch (e) { msg.textContent = 'Lỗi mạng'; }
+    });
+  </script>
+</body>
+</html>
