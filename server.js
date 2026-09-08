@@ -23,16 +23,27 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'xnhau.cc' });
 });
 
-// Require API modules - fail fast if missing
-function requireModule(p) {
+// Require API modules - fail fast if missing, with clearer path resolution
+function requireModule(relPath) {
   try {
-    const mod = require(p);
+    const full = path.resolve(__dirname, relPath);
+    // Check both with and without .js extension
+    const candidates = [full, `${full}.js`, path.join(full, 'index.js')];
+    const exists = candidates.some(p => fs.existsSync(p));
+    if (!exists) {
+      const err = new Error(`Required module not found: ${relPath} (resolved to ${full})`);
+      err.code = 'MODULE_NOT_FOUND_CUSTOM';
+      throw err;
+    }
+    const mod = require(full);
     if (typeof mod !== 'function' && typeof mod !== 'object') {
-      throw new Error(`Module ${p} did not export a function/object`);
+      throw new Error(`Module ${relPath} did not export a function/object`);
     }
     return mod;
   } catch (e) {
-    console.error(`Failed to load module ${p}:`, e && e.message ? e.message : e);
+    // Enhance the error message for logs then rethrow so Vercel shows the precise cause
+    console.error('[xnhau.cc] Failed to load module', relPath);
+    console.error(e && e.stack ? e.stack : e);
     throw e;
   }
 }
