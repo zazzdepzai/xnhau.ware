@@ -1,15 +1,16 @@
 // Serve stream or redirect to url
 const path = require('path');
 const fs = require('fs');
-const { init, isPostgres } = require('../api/db');
+const { init, isPostgres } = require('../db');
 
 module.exports = async (req, res) => {
   const token = req.url.split('/').pop();
-  const db = await init();
+  const dbObj = await init();
+  const db = dbObj.pool;
   if (isPostgres) {
-    const r = await db.query('SELECT url, mime, stored_name FROM videos WHERE token=$1', [token]);
-    if (!r.rows.length) return res.sendStatus(404);
-    const row = r.rows[0];
+    const r = (await db.query('SELECT url, mime, stored_name FROM videos WHERE token=$1', [token])).rows;
+    if (!r.length) return res.sendStatus(404);
+    const row = r[0];
     // If url is absolute (blob), redirect
     if (row.url && row.url.startsWith('http')) return res.redirect(row.url);
     // else serve from local public/uploads
