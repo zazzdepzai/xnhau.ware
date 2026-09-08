@@ -1,8 +1,12 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// basic rate limiter for APIs
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
 
 // middlewares
 app.use(express.json({ limit: '50mb' }));
@@ -17,6 +21,9 @@ app.use((req, res, next) => {
 
 // serve static files from public
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Apply API rate limiter
+app.use('/api/', apiLimiter);
 
 // Health endpoint (lightweight, does not require DB)
 app.get('/api/health', (req, res) => {
@@ -52,18 +59,21 @@ function requireModule(relPath) {
 const adminLogin = requireModule('./api/admin/login');
 const adminLogout = requireModule('./api/admin/logout');
 const adminProfile = requireModule('./api/admin/profile');
+const adminAvatar = requireModule('./api/admin/avatar');
 const uploadHandler = requireModule('./api/upload');
 const streamHandler = requireModule('./api/stream/[token]');
 const videoMetaHandler = requireModule('./api/video/[token]');
 const commentsHandler = requireModule('./api/video/[token]/comments');
 const likeHandler = requireModule('./api/video/[token]/like');
 const viewHandler = requireModule('./api/video/[token]/view');
+const publicAvatar = requireModule('./api/profile/avatar');
 
 // Mount routes
 app.post('/api/admin/login', adminLogin);
 app.post('/api/admin/logout', adminLogout);
 app.get('/api/admin/profile', adminProfile);
 app.post('/api/admin/profile', adminProfile);
+app.post('/api/admin/avatar', adminAvatar);
 app.post('/api/admin/upload', uploadHandler);
 
 app.get('/api/video/:token', (req, res) => videoMetaHandler(req, res));
@@ -71,6 +81,9 @@ app.all('/api/video/:token/comments', (req, res) => commentsHandler(req, res));
 app.post('/api/video/:token/like', (req, res) => likeHandler(req, res));
 app.post('/api/video/:token/view', (req, res) => viewHandler(req, res));
 app.get('/stream/:token', (req, res) => streamHandler(req, res));
+
+// public avatar endpoint
+app.get('/api/profile/avatar', publicAvatar);
 
 // Admin static pages
 app.get('/admin', (req, res) => {
