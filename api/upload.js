@@ -1,8 +1,8 @@
 const formidable = require('formidable');
 const fs = require('fs');
 const path = require('path');
-const { init } = require('../db');
-const { tok } = require('../utils');
+const { init } = require('./db');
+const { tok } = require('./utils');
 
 let vercelBlob = null;
 try { vercelBlob = require('@vercel/blob'); } catch(e) { vercelBlob = null; }
