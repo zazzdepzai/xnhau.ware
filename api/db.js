@@ -63,4 +63,4 @@ async function init() {
   return { pool, isPostgres: true };
 }
 
-module.exports = { init };
+module.exports = { init, isPostgres: true };
